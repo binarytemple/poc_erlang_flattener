@@ -16,21 +16,34 @@ is_string(XY) ->
   end
 .
 
-
 all_strings(List) ->
-
   lists:all(
-
     fun(X) -> is_string(X) end,
     List)
-
 .
 
 stringify_array(L = [_ | _]) ->
-
   string:join(L, ",")
-
 .
+
+
+
+prepend_prefix(List = [_ | _]) ->
+
+  [prepend_prefix(X) || X <- List]
+
+;
+prepend_prefix({Depth, Path}) ->
+  Prefix = case length(Depth) > 0 of
+             true ->
+               string:join(
+                 [atom_to_list(X) || X <- Depth]
+                 , ",") ++ ".";
+             false -> []
+           end,
+  Prefix ++ Path
+.
+
 
 
 flatton({X, Y}) -> flatton({X, Y}, [], []);
@@ -38,34 +51,32 @@ flatton(X) -> flatton(X, [], []).
 
 flatton([{Prop, Val} | Y], Depth, Acc) ->
   case {is_atom(Prop), is_string(Prop), is_atom(Val), is_integer(Val)} of
-    {true, _, true, _} -> flatton(Y, Depth, Acc ++ [atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)]);
-    {true, _, _, true} -> flatton(Y, Depth, Acc ++ [atom_to_list(Prop) ++ "=" ++ integer_to_list(Val)]);
+    {true, _, true, _} -> flatton(Y, Depth, Acc ++ [{Depth, atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)}]);
+    {true, _, _, true} -> flatton(Y, Depth, Acc ++ [{Depth, atom_to_list(Prop) ++ "=" ++ integer_to_list(Val)}]);
     {true, _, _, _} ->
       case is_string(Val) of
-        true -> flatton(Y, Depth, Acc ++ atom_to_list(Prop) ++ "=" ++ Val);
+        true -> flatton(Y, Depth, Acc ++ [{Depth, atom_to_list(Prop) ++ "=" ++ Val}]);
       %% the case of other structure..
         _ -> X = flatton(Val),
           flatton(Y, Depth, Acc ++ [X])
       end;
-    {false, true, _, _} -> flatton(Y, Depth, Acc ++ [atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)]);
+    {false, true, _, _} -> flatton(Y, Depth, Acc ++ [{Depth, [atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)]}]);
     _ -> flatton(Y, [] ++ Prop, Acc ++ [io_lib:format("~p=~p", [Prop, Val])])
   end
 ;
 
 flatton({Prop, Val}, Depth, []) when is_atom(Prop) and is_atom(Val) ->
-
-  prepend_prefix(Depth,
-
-    atom_to_list(Prop) ++ "=" ++ atom_to_list(Val))
-
+  flatton([], [], [{Depth,
+      atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)}])
 ;
 
 flatton({Prop, Val}, Depth, []) ->
   case is_string(Val) of
-    true -> prepend_prefix(Depth, atom_to_list(Prop) ++ "=" ++ Val);
+    true -> prepend_prefix({Depth, atom_to_list(Prop) ++ "=" ++ Val});
     _ -> case is_integer(Val) of
-           true -> atom_to_list(Prop) ++ "=" ++ integer_to_list(Val);
+           true -> [{Depth, atom_to_list(Prop) ++ "=" ++ integer_to_list(Val)}];
            _ ->
+             NewDepth = Depth ++ [Prop],
              case is_tuple(Val) of
                true -> L = tuple_to_list(Val),
                  AtomHead = is_atom(hd(L)),
@@ -78,12 +89,12 @@ flatton({Prop, Val}, Depth, []) ->
                    true when Len == 2 ->
                      case {StringTail, ListTail, AtomTail} of
                        {true, false, false} ->
-                         flatton([], Depth ++ [Prop], atom_to_list(H) ++ "=" ++ Val);
+                         flatton([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ Val}]);
                        {false, false, true} ->
-                         flatton([], Depth ++ [Prop], atom_to_list(H) ++ "=" ++ atom_to_list(Val));
+                         flatton([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ atom_to_list(Val)}]);
                        {false, true, false} ->
                          case all_strings(T) of
-                           true -> flatton([], Depth ++ [Prop], atom_to_list(H) ++ "=" ++ stringify_array(T));
+                           true -> flatton([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ stringify_array(T)}]);
                            _ -> "can't cope"
                          end;
                        _ -> "freakout!"
@@ -91,59 +102,37 @@ flatton({Prop, Val}, Depth, []) ->
                    _ -> "cant handle"
                  end;
                _ -> case is_list(Val) of
-                      _ -> flatton(Val, Depth ++ [Prop], [])
+                      _ -> flatton(Val, NewDepth, [])
                     end
              end
          end
   end
 ;
 
-flatton([], Depth, X) ->
-  prepend_prefix(Depth, X)
+flatton([], _Depth, X) ->
+  prepend_prefix(X)
 .
-
-prepend_prefix(Depth, Path) ->
-
-  Prefix = case length(Depth) > 0 of
-             true ->
-               string:join(
-                 [atom_to_list(X) || X <- Depth]
-                 , ",") ++ ".";
-             false -> []
-           end,
-
-  Prefix ++ Path
-;
-
-prepend_prefix([], Path) ->
-  Path
-.
-
 
 init() ->
-  Test = [
+  Input = [
     {foo1, bar1},
     {foo2, 10},
     {foo3, "blah"},
     {foo4, {baz, "bar"}},
     {foo4, [{foo5, "bar"}]},
-      {foo5, [
-        {foo6, "bar"},
-        {foo7, "barbara"}
-      ]}
+    {foo5, [
+      {foo6, "bar"},
+      {foo7, "barbara"}
+    ]}
+  ],
 
-    ],
+  io:format("Input~n", []),
+  io:format("~p~n", [Input]),
 
-%%     ,
-%%     {foo6, [{foo7, [{foo8, "bar"}]}]}],
-      io:format("~p~n", [Test]),
-      io:format("transformed~n", []),
-      Flattened = [flatton(X) || X <- Test],
-      io:format("~p~n", [Flattened]),
-      ok
+  io:format("Transformed~n", []),
+  Flattened =
+    [flatton(X) || X <- Input]
+  ,
+  io:format("~p~n", [Flattened]),
+  Flattened
 .
-
-%% extractPropLists([], ResultList) -> ResultList;
-%% extractPropLists( [H|T], ResultList ) ->    extractPropLists(T, extractPropLists(H, ResultList));
-%% extractPropLists( {K,V}, ResultList ) -> [ {K,V} | extractPropLists(K, extractPropLists(V, ResultList)) ];
-%% extractPropLists( T, ResultList ) -> ResultList.
