@@ -26,11 +26,11 @@ all_strings(List) ->
 
 .
 
-stringify_array( L= [_|_]) ->
+stringify_array(L = [_ | _]) ->
 
-  string:join(L,  ",")
+  string:join(L, ",")
 
-  .
+.
 
 
 flatton({X, Y}) -> flatton({X, Y}, [], []);
@@ -105,12 +105,12 @@ flatton([], Depth, X) ->
 prepend_prefix(Depth, Path) ->
 
   Prefix = case length(Depth) > 0 of
-    true ->
-  string:join(
-    [atom_to_list(X) || X <- Depth]
-    , ",") ++ ".";
-      false -> []
-end,
+             true ->
+               string:join(
+                 [atom_to_list(X) || X <- Depth]
+                 , ",") ++ ".";
+             false -> []
+           end,
 
   Prefix ++ Path
 ;
@@ -122,25 +122,25 @@ prepend_prefix([], Path) ->
 
 init() ->
   Test = [
-%%     {foo1, bar1},
-%%     {foo2, 10},
-%%     {foo3, "blah"},
-%%     {foo4, {baz, "bar"}},
-%%      {foo4, [{foo5, "bar"}]},
-    {foo4, [
-      {foo5, "bar"},
-      {foo6, "barbara"}
-    ]}
+    {foo1, bar1},
+    {foo2, 10},
+    {foo3, "blah"},
+    {foo4, {baz, "bar"}},
+    {foo4, [{foo5, "bar"}]},
+      {foo5, [
+        {foo6, "bar"},
+        {foo7, "barbara"}
+      ]}
 
-  ],
+    ],
 
 %%     ,
 %%     {foo6, [{foo7, [{foo8, "bar"}]}]}],
-  io:format("~p~n", [Test]),
-  io:format("transformed~n", []),
-  Flattened = [flatton(X) || X <- Test],
-  io:format("~p~n", [Flattened]),
-  ok
+      io:format("~p~n", [Test]),
+      io:format("transformed~n", []),
+      Flattened = [flatton(X) || X <- Test],
+      io:format("~p~n", [Flattened]),
+      ok
 .
 
 %% extractPropLists([], ResultList) -> ResultList;
