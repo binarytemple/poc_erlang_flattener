@@ -29,9 +29,7 @@ stringify_array(L = [_ | _]) ->
 
 
 prepend_prefix(List = [_ | _]) ->
-
   [prepend_prefix(X) || X <- List]
-
 ;
 prepend_prefix({Depth, Path}) ->
   Prefix = case length(Depth) > 0 of
@@ -66,46 +64,47 @@ flatton([{Prop, Val} | Y], Depth, Acc) ->
 ;
 
 flatton({Prop, Val}, Depth, []) when is_atom(Prop) and is_atom(Val) ->
-  flatton([], [], [{Depth,
-      atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)}])
+  prepend_prefix({Depth,
+      atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)})
 ;
 
 flatton({Prop, Val}, Depth, []) ->
   case is_string(Val) of
     true -> prepend_prefix({Depth, atom_to_list(Prop) ++ "=" ++ Val});
-    _ -> case is_integer(Val) of
-           true -> [{Depth, atom_to_list(Prop) ++ "=" ++ integer_to_list(Val)}];
-           _ ->
-             NewDepth = Depth ++ [Prop],
-             case is_tuple(Val) of
-               true -> L = tuple_to_list(Val),
-                 AtomHead = is_atom(hd(L)),
-                 Len = length(L),
-                 [H | T] = L,
-                 StringTail = is_string(T),
-                 ListTail = is_list(T),
-                 AtomTail = is_atom(T),
-                 case AtomHead of
-                   true when Len == 2 ->
-                     case {StringTail, ListTail, AtomTail} of
-                       {true, false, false} ->
-                         flatton([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ Val}]);
-                       {false, false, true} ->
-                         flatton([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ atom_to_list(Val)}]);
-                       {false, true, false} ->
-                         case all_strings(T) of
-                           true -> flatton([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ stringify_array(T)}]);
-                           _ -> "can't cope"
+    false -> case is_integer(Val) of
+               true -> prepend_prefix({Depth, atom_to_list(Prop) ++ "=" ++ integer_to_list(Val)});
+               _ ->
+                 NewDepth = Depth ++ [Prop],
+                 case is_tuple(Val) of
+                   true -> L = tuple_to_list(Val),
+                     AtomHead = is_atom(hd(L)),
+                     Len = length(L),
+                     [H | [T | _]] = L,
+                     StringTail = is_string(T),
+                     ListTail = is_list(T),
+                     AtomTail = is_atom(T),
+                     case AtomHead of
+                       true when Len == 2 ->
+                         case {StringTail, ListTail, AtomTail} of
+                           {true, _, _} ->
+                             prepend_prefix({NewDepth, atom_to_list(H) ++ "=" ++ T});
+                           {_, _, true} ->
+                             prepend_prefix({NewDepth, atom_to_list(H) ++ "=" ++ atom_to_list(Val)});
+                           {_, true, _} ->
+                             case all_strings(T) of
+                               true ->
+                                 flatton([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ stringify_array(T)}]);
+                               _ -> "can't cope"
+                             end;
+                           _ -> "freakout!"
                          end;
-                       _ -> "freakout!"
+                       _ -> "cant handle"
                      end;
-                   _ -> "cant handle"
-                 end;
-               _ -> case is_list(Val) of
-                      _ -> flatton(Val, NewDepth, [])
-                    end
+                   _ -> case is_list(Val) of
+                          _ -> flatton(Val, NewDepth, [])
+                        end
+                 end
              end
-         end
   end
 ;
 
