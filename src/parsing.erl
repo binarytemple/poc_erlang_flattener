@@ -31,6 +31,15 @@ stringify_array(L = [_ | _]) ->
 prepend_prefix(List = [_ | _]) ->
   [prepend_prefix(X) || X <- List]
 ;
+
+prepend_prefix({[], Path}) ->
+  Path
+;
+
+prepend_prefix({Depth, Path = [{[_], [_]} | _]}) ->
+  "foo"
+;
+
 prepend_prefix({Depth, Path}) ->
   Prefix = case length(Depth) > 0 of
              true ->
@@ -70,9 +79,12 @@ flatton({Prop, Val}, Depth, []) when is_atom(Prop) and is_atom(Val) ->
 
 flatton({Prop, Val}, Depth, []) ->
   case is_string(Val) of
-    true -> prepend_prefix({Depth, atom_to_list(Prop) ++ "=" ++ Val});
+    true ->
+%%       prepend_prefix([{Depth, atom_to_list(Prop) ++ "=" ++ Val}]);
+      flatton([], Depth, atom_to_list(Prop) ++ "=" ++ Val);
+
     false -> case is_integer(Val) of
-               true -> prepend_prefix({Depth, atom_to_list(Prop) ++ "=" ++ integer_to_list(Val)});
+               true -> flatton([], Depth, atom_to_list(Prop) ++ "=" ++ integer_to_list(Val));
                _ ->
                  NewDepth = Depth ++ [Prop],
                  case is_tuple(Val) of
@@ -93,7 +105,8 @@ flatton({Prop, Val}, Depth, []) ->
                            {_, true, _} ->
                              case all_strings(T) of
                                true ->
-                                 flatton([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ stringify_array(T)}]);
+%%                                  flatton([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ stringify_array(T)}]);
+                                 prepend_prefix({NewDepth, atom_to_list(H) ++ "=" ++ stringify_array(T)});
                                _ -> "can't cope"
                              end;
                            _ -> "freakout!"
@@ -108,8 +121,14 @@ flatton({Prop, Val}, Depth, []) ->
   end
 ;
 
-flatton([], _Depth, X) ->
+flatton([], _, X = [{[_], _} | _]) ->
   prepend_prefix(X)
+;
+
+
+
+flatton([], Depth, X) ->
+  prepend_prefix({Depth, X})
 .
 
 init() ->
