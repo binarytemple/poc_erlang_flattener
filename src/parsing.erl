@@ -45,7 +45,7 @@ prepend_prefix({Depth, Path}) ->
              true ->
                string:join(
                  [atom_to_list(X) || X <- Depth]
-                 , ",") ++ ".";
+                 , ".") ++ ".";
              false -> []
            end,
   Prefix ++ Path
@@ -65,7 +65,8 @@ flatton([{Prop, Val} | Y], Depth, Acc) ->
         true -> flatton(Y, Depth, Acc ++ [{Depth, atom_to_list(Prop) ++ "=" ++ Val}]);
       %% the case of other structure..
         _ -> X = flatton(Val),
-          flatton(Y, Depth, Acc ++ [X])
+          NewDepth = Depth ++ [Prop],
+          flatton(Y, NewDepth, Acc ++ [{NewDepth,X}])
       end;
     {false, true, _, _} -> flatton(Y, Depth, Acc ++ [{Depth, [atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)]}]);
     _ -> flatton(Y, [] ++ Prop, Acc ++ [io_lib:format("~p=~p", [Prop, Val])])
@@ -141,6 +142,10 @@ init() ->
     {foo5, [
       {foo6, "bar"},
       {foo7, "barbara"}
+    ]},
+    {foo6, [
+      {foo7, "baz"},
+      {foo8, {foo9, "barbaraz"}}
     ]}
   ],
 
