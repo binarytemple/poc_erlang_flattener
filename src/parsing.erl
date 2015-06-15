@@ -56,6 +56,10 @@ prepend_prefix({Depth, Path}) ->
 flatton({X, Y}) -> flatton({X, Y}, [], []);
 flatton(X) -> flatton(X, [], []).
 
+flatton([{Prop, Val} | Y], Depth, Acc) when is_binary(Prop) ->
+  flatton(Y, Depth, Acc ++ [{Depth, atom_to_list(Prop) ++ "=" ++ binary_to_list(Val)}])
+;
+
 flatton([{Prop, Val} | Y], Depth, Acc) ->
   case {is_atom(Prop), is_string(Prop), is_atom(Val), is_integer(Val)} of
     {true, _, true, _} -> flatton(Y, Depth, Acc ++ [{Depth, atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)}]);
@@ -76,6 +80,10 @@ flatton([{Prop, Val} | Y], Depth, Acc) ->
 flatton({Prop, Val}, Depth, []) when is_atom(Prop) and is_atom(Val) ->
   prepend_prefix({Depth,
       atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)})
+;
+
+flatton({Prop, Val}, Depth, []) when is_binary(Val)->
+      flatton([], Depth, atom_to_list(Prop) ++ "=" ++ binary_to_list(Val))
 ;
 
 flatton({Prop, Val}, Depth, []) ->
@@ -134,6 +142,8 @@ flatton([], Depth, X) ->
 
 init() ->
   Input = [
+    {foo1, <<"bar1">>}
+    ,
     {foo1, bar1},
     {foo2, 10},
     {foo3, "blah"},
@@ -146,6 +156,10 @@ init() ->
     {foo6, [
       {foo7, "baz"},
       {foo8, {foo9, "barbaraz"}}
+    ]},
+    {foo7, [
+      {foo8, "baz"},
+      {foo9, {foo10, <<"barbaraz">>}}
     ]}
   ],
 
