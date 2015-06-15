@@ -27,5 +27,6 @@ TODO:
 
 * Consistent handling
 * Fix all the bugs
-* Flatten the output lists
+* De-uglify the code
+* Write a unit test
 
