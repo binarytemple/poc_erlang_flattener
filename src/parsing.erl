@@ -23,13 +23,8 @@ all_strings(List) ->
 .
 
 stringify_array(L = [_ | _]) ->
-
-
-
-  string:join(L, "\n")
+  string:join(L, ",")
 .
-
-
 
 prepend_prefix(List = [_ | _]) ->
   [prepend_prefix(X) || X <- List]
@@ -37,10 +32,6 @@ prepend_prefix(List = [_ | _]) ->
 
 prepend_prefix({[], Path}) ->
   Path
-;
-
-prepend_prefix({Depth, Path = [{[_], [_]} | _]}) ->
-  "foo"
 ;
 
 prepend_prefix({Depth, Path}) ->
@@ -53,8 +44,6 @@ prepend_prefix({Depth, Path}) ->
            end,
   Prefix ++ Path
 .
-
-
 
 flat_nest({X, Y}) -> flat_nest({X, Y}, [], []);
 flat_nest(X) -> flat_nest(X, [], []).
@@ -70,10 +59,9 @@ flat_nest([{Prop, Val} | Y], Depth, Acc) ->
     {true, _, _, _} ->
       case is_string(Val) of
         true -> flat_nest(Y, Depth, Acc ++ [{Depth, atom_to_list(Prop) ++ "=" ++ Val}]);
-      %% the case of other structure..
         _ -> X = flat_nest(Val),
           NewDepth = Depth ++ [Prop],
-          flat_nest(Y, NewDepth, Acc ++ [{NewDepth,X}])
+          flat_nest(Y, NewDepth, Acc ++ [{NewDepth, X}])
       end;
     {false, true, _, _} -> flat_nest(Y, Depth, Acc ++ [{Depth, [atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)]}]);
     _ -> flat_nest(Y, [] ++ Prop, Acc ++ [io_lib:format("~p=~p", [Prop, Val])])
@@ -85,16 +73,14 @@ flat_nest({Prop, Val}, Depth, []) when is_atom(Prop) and is_atom(Val) ->
       atom_to_list(Prop) ++ "=" ++ atom_to_list(Val)})
 ;
 
-flat_nest({Prop, Val}, Depth, []) when is_binary(Val)->
-      flat_nest([], Depth, atom_to_list(Prop) ++ "=" ++ binary_to_list(Val))
+flat_nest({Prop, Val}, Depth, []) when is_binary(Val) ->
+  flat_nest([], Depth, atom_to_list(Prop) ++ "=" ++ binary_to_list(Val))
 ;
 
 flat_nest({Prop, Val}, Depth, []) ->
   case is_string(Val) of
     true ->
-%%       prepend_prefix([{Depth, atom_to_list(Prop) ++ "=" ++ Val}]);
       flat_nest([], Depth, atom_to_list(Prop) ++ "=" ++ Val);
-
     false -> case is_integer(Val) of
                true -> flat_nest([], Depth, atom_to_list(Prop) ++ "=" ++ integer_to_list(Val));
                _ ->
@@ -117,7 +103,6 @@ flat_nest({Prop, Val}, Depth, []) ->
                            {_, true, _} ->
                              case all_strings(T) of
                                true ->
-%%                                  flat_nest([], NewDepth, [{NewDepth, atom_to_list(H) ++ "=" ++ stringify_array(T)}]);
                                  prepend_prefix({NewDepth, atom_to_list(H) ++ "=" ++ stringify_array(T)});
                                _ -> "can't cope"
                              end;
@@ -138,48 +123,41 @@ flat_nest([], _, X = [{[_], _} | _]) ->
 ;
 
 
-
 flat_nest([], Depth, X) ->
   prepend_prefix({Depth, X})
 .
 
 flatten(X) ->
-  flatten(X,[]).
+  flatten(X, []).
 
-flatten([],Acc) ->
+flatten([], Acc) ->
   Acc;
 
-%% flatten([[X|Y],Z],Acc) ->
-%%   flatten(Y,Acc ++ [X])
-%%   ;
-
-flatten([[]|Y],Acc) ->
-  flatten(Y,Acc)
+flatten([[] | Y], Acc) ->
+  flatten(Y, Acc)
 ;
 
-flatten(In = [[X|Y]|Z],Acc) ->
-  case {is_string([X|Y]),X,Y,Z} of
-    {true,_,_,_} -> flatten(Z,Acc ++ [[X|Y]]);
-    {false,[],[],_} ->
-      flatten(Z,Acc);
-    {false,_,[],_} ->
-      flatten([X|Z],Acc);
-    {false,_,[],[]} ->
-      flatten([X],Acc);
-    {false,[],_,_} ->
-      flatten([Y,Z],Acc);
-    {false,_,_,[]} ->
-      flatten([Y,Z],Acc ++ [X]);
-%%     {false,_,[_],_} ->
-%%       flatten([Y|Z],Acc ++ [X])
-    {false,_,_,_} ->
-      flatten([Y|Z],Acc ++ [X])
+flatten([[X | Y] | Z], Acc) ->
+  case {is_string([X | Y]), X, Y, Z} of
+    {true, _, _, _} -> flatten(Z, Acc ++ [[X | Y]]);
+    {false, [], [], _} ->
+      flatten(Z, Acc);
+    {false, _, [], _} ->
+      flatten([X | Z], Acc);
+    {false, _, [], []} ->
+      flatten([X], Acc);
+    {false, [], _, _} ->
+      flatten([Y, Z], Acc);
+    {false, _, _, []} ->
+      flatten([Y, Z], Acc ++ [X]);
+    {false, _, _, _} ->
+      flatten([Y | Z], Acc ++ [X])
 
-end
+  end
 ;
 
-flatten([X|Y],Acc) ->
-  flatten(Y,Acc ++ [X])
+flatten([X | Y], Acc) ->
+  flatten(Y, Acc ++ [X])
 .
 
 
@@ -217,11 +195,7 @@ init() ->
   io:format("Transformed 2 ~n", []),
   Processed2 = flatten(Processed),
 
-   io:format("~p~n", [Processed2]),
-Processed2
-%%   Stringified =
-%%     stringify_array (Flattened)
-%%   ,
-%%   io:format("~p~n", [Stringified]),
-%%       ok
+  io:format("~p~n", [Processed2]),
+  Processed2,
+  ok
 .
