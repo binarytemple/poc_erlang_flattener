@@ -142,10 +142,10 @@ flatten([[X | Y] | Z], Acc) ->
     {true, _, _, _} -> flatten(Z, Acc ++ [[X | Y]]);
     {false, [], [], _} ->
       flatten(Z, Acc);
-    {false, _, [], _} ->
-      flatten([X | Z], Acc);
     {false, _, [], []} ->
       flatten([X], Acc);
+    {false, _, [], _} ->
+      flatten([X | Z], Acc);
     {false, [], _, _} ->
       flatten([Y, Z], Acc);
     {false, _, _, []} ->
